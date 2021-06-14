@@ -1,6 +1,8 @@
 <?php
-include("config.php");
+include_once("config.php");
+include_once("database.php");
 ?>
+
 <head>
     <meta charset="UTF-8">
     <title>SPAIN IS PAIN</title>
@@ -21,6 +23,11 @@ include("config.php");
         }
     </style>
     <script>
+        function hola(id, nombre) {
+            console.log("Hola: " + id + " " + nombre)
+        }
+    </script>
+    <script>
         function initMap() {
             var icon = {
                 url: "edificio.png", // url
@@ -35,25 +42,44 @@ include("config.php");
             };
 
             var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+            <?php
+            $sql = "SELECT * FROM ciudades";
+            $do = mysqli_query($link, $sql);
+            while ($ciudad = mysqli_fetch_assoc($do)) {
+            ?>
+                var infowindow = new google.maps.InfoWindow({
+                    content: '',
+                });
+                var ciudad = {
+                    lat: <?php echo $ciudad["lat"] ?>,
+                    lng: <?php echo $ciudad["lng"] ?>
+                };
+                var city = new google.maps.Marker({
+                    position: ciudad,
+                    map: map,
+                    icon: icon,
+                    title: "<?php echo $ciudad["nombre"] ?>",
+                });
+                bindInfoWindow(city, map, infowindow, "<p><?php echo $ciudad["nombre"] ?></p>");
+                closeInfoWindow(city, map, infowindow);
+                city.addListener("click", () => {
+                    hola("<?php echo $ciudad["id"] ?>", "<?php echo $ciudad["nombre"] ?>");
+                });
+            <?php
+            }
+            ?>
 
-            var vigo = {
-                lat: 42.2260878,
-                lng: -8.7429354
+            function bindInfoWindow(marker, map, infowindow, html) {
+                google.maps.event.addListener(marker, 'mouseover', function() {
+                    infowindow.setContent(html);
+                    infowindow.open(map, marker);
+                });
             };
-            var madrid = {
-                lat: 40.4379332,
-                lng: -3.7495756
+            function closeInfoWindow(marker, map, infowindow) {
+                google.maps.event.addListener(marker, 'mouseout', function() {
+                    infowindow.close(map, marker);
+                });
             };
-            var city = new google.maps.Marker({
-                position: vigo,
-                map: map,
-                icon: icon,
-            });
-            var city = new google.maps.Marker({
-                position: madrid,
-                map: map,
-                icon: icon,
-            });
 
         }
     </script>
@@ -91,7 +117,7 @@ include("config.php");
         </div>
     </div>
     <div id="map"></div>
-    
+
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=<?php echo $config[0]["google"] ?>&callback=initMap">
     </script>
 </body>

@@ -5,7 +5,9 @@
 .gmnoprint{
     display: none !important;
 }
-
+.gm-ui-hover-effect{
+    display: none !important;
+}
 .jugador{
     position: absolute;
     top: 0;
