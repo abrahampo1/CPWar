@@ -8,14 +8,41 @@
 .gm-ui-hover-effect{
     display: none !important;
 }
+button{
+    cursor: pointer;
+}
 .jugador{
     position: absolute;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
     z-index: 2;
     background-color: whitesmoke;
-    border-radius: 0px 0px 20px 20px;
+    border-radius: 0px 0px 20px 0px;
+    padding: 20px;
+    text-align: center;
+    font-family: 'Roboto Mono', monospace;
+}
+.controles{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    background-color: whitesmoke;
+    border-radius: 0px 20px 0px 0px;
+    padding: 20px;
+    text-align: center;
+    font-family: 'Roboto Mono', monospace;
+}
+.controles button{
+    font-family: 'Roboto Mono', monospace;
+}
+.dinero{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 2;
+    background-color: whitesmoke;
+    border-radius: 20px 0px 0px 0px;
     padding: 20px;
     text-align: center;
     font-family: 'Roboto Mono', monospace;
@@ -98,4 +125,5 @@
     background-color: white ;
     border-radius: 15px;
     height: calc(100% - 80px);
+    overflow: scroll;
 }

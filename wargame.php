@@ -1,6 +1,25 @@
 <?php
 include_once("config.php");
 include_once("database.php");
+include_once("funciones.php");
+session_start();
+if (isset($_SESSION["userid"])) {
+    $sql = "SELECT * FROM gente WHERE id = " . $_SESSION["userid"];
+    $do = mysqli_query($link, $sql);
+    $datos_usuario = mysqli_fetch_assoc($do);
+    $nombre = $datos_usuario["nombre"];
+    $id_usuario = $datos_usuario["id"];
+    $pais = $datos_usuario["pais"];
+    $sql = "SELECT * FROM partidas WHERE id = 1";
+    $do = mysqli_query($link, $sql);
+    $datos_partida = mysqli_fetch_assoc($do);
+    $actividad = $datos_partida["actividad"];
+} else {
+    header("location: login.php");
+}
+if (isset($_POST["reiniciar"])) {
+    empezarpartida();
+}
 ?>
 
 <head>
@@ -63,7 +82,7 @@ include_once("database.php");
                 bindInfoWindow(city, map, infowindow, "<p><?php echo $ciudad["nombre"] ?></p>");
                 closeInfoWindow(city, map, infowindow);
                 city.addListener("click", () => {
-                    hola("<?php echo $ciudad["id"] ?>", "<?php echo $ciudad["nombre"] ?>");
+                    seleccionar_ciudad(<?php echo $ciudad["id"] ?>);
                 });
             <?php
             }
@@ -75,6 +94,7 @@ include_once("database.php");
                     infowindow.open(map, marker);
                 });
             };
+
             function closeInfoWindow(marker, map, infowindow) {
                 google.maps.event.addListener(marker, 'mouseout', function() {
                     infowindow.close(map, marker);
@@ -85,36 +105,42 @@ include_once("database.php");
     </script>
 </head>
 
-<body>
+<body onload="updateall()">
     <div class="jugador">
-        <h1>Abraham</h1>
-        <h2>Gobierno: ESPAÑA</h2>
+        <h1><?php echo $nombre ?></h1>
+        <h2>Pais: <?php echo $pais ?></h2>
     </div>
     <div class="info-ciudad">
-        <h1>Vigo</h1>
-        <h2>Tropas: 1000</h2>
-        <button type="button">Mover</button>
-        <button type="button">Dividir</button>
-        <button type="button">Combinar</button>
+        <div id="info-ciudad-var">
+            <h1 id="info-ciudad-nombre"></h1>
+            <h2 id="owner"></h2>
+            <h2 id="info-ciudad-tropas-total"></h2>
+            <div id="info-ciudad-tropas"></div>
+        </div>
+        <div id="buttons">
+
+        </div>
+
 
     </div>
     <div class="notificaciones">
         <h1>Notificaciones</h1>
-        <div class="textbox">
-            <h4><strong>Abraham</strong> ha capturado <strong>Vigo</strong>!</h4>
+        <div class="textbox" id="actividad">
+            <h4><?php echo $actividad; ?></h4>
         </div>
 
 
     </div>
-    <div class="ciudades">
-        <div class="ciudad">
-            <img src="edificio.png" alt="">
-            <h2>Vigo</h2>
-        </div>
-        <div class="ciudad">
-            <img src="edificio.png" alt="">
-            <h2>Madrid</h2>
-        </div>
+    <div class="ciudades" id="ciudades">
+        
+    </div>
+    <div class="controles">
+        <form action="" method="POST">
+            <button name="reiniciar">Reiniciar</button>
+        </form>
+    </div>
+    <div class="dinero">
+        <h1>1000€</h1>
     </div>
     <div id="map"></div>
 
@@ -123,3 +149,69 @@ include_once("database.php");
 </body>
 
 </html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+    function seleccionar_ciudad(id) {
+        var nombre = document.getElementById("info-ciudad-nombre");
+        var tropas = document.getElementById("info-ciudad-tropas");
+        var tropas_total = document.getElementById("info-ciudad-tropas-total");
+        var owner = document.getElementById('owner');
+        var botones = document.getElementById('buttons');
+        tropas.innerHTML = "Cargando...";
+        $.ajax('./ajax.php', {
+            type: 'POST', // http method
+            data: {
+                id: id
+            }, // data to submit
+            success: function(data) {
+                //alert(data);
+                tropas.innerHTML = "";
+                var result = JSON.parse(data);
+                nombre.innerHTML = result.nombre;
+                owner.innerHTML = result.pais;
+                botones.innerHTML = result.botones;
+                var total_tropas = result.tropas.total;
+                tropas_total.innerHTML = "Tropas: " + total_tropas;
+                for (var i = 0; i != Object.keys(result.tropas.tipos).length; i++) {
+                    tropas.innerHTML += "<p>" + result.tropas.tipos[i].nombre + ": " + result.tropas.tipos[i].cantidad + "</p>";
+                }
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+
+    function starthere(ciudad) {
+        $.ajax('./ajax.php', {
+            type: 'POST',
+            data: {
+                start: ciudad
+            },
+            success: function(data) {
+                alert(data);
+                updateall();
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+
+    function updateall() {
+        var ciudades = document.getElementById("ciudades");
+        var actividad = document.getElementById("actividad");
+        $.ajax('./ajax.php', {
+            type: 'POST',
+            data: {
+                log: 'player'
+            },
+            success: function(data) {
+                //alert(data);
+                var result = JSON.parse(data);
+                actividad.innerHTML = "<h4>"+result.actividad+"</h4>";
+                for (var i = 0; i != Object.keys(result.mano).length; i++) {
+                    ciudades.innerHTML = '<div class="ciudad" onclick="seleccionar_ciudad('+result.mano[i].id+')"><img src="edificio.png" alt=""><h2>'+result.mano[i].nombre+'</h2></div>'
+                }
+                
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+</script>
