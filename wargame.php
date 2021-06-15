@@ -79,18 +79,28 @@ if (isset($_POST["reiniciar"])) {
                     icon: icon,
                     title: "<?php echo $ciudad["nombre"] ?>",
                 });
-                bindInfoWindow(city, map, infowindow, "<p><?php echo $ciudad["nombre"] ?></p>");
+                bindInfoWindow(city, map, infowindow, "<p><?php echo $ciudad["nombre"] ?></p>", <?php echo $ciudad["id"] ?>);
                 closeInfoWindow(city, map, infowindow);
                 city.addListener("click", () => {
-                    seleccionar_ciudad(<?php echo $ciudad["id"] ?>);
+                    
+                    if (localStorage.getItem('estado') == 'mover' && localStorage.getItem('from') != <?php echo $ciudad["id"] ?>) {
+                        moveto(<?php echo $ciudad["id"] ?>, localStorage.getItem('from'));
+                        localStorage.removeItem('estado');
+                        localStorage.removeItem('from');
+                    }else{
+                        seleccionar_ciudad(<?php echo $ciudad["id"] ?>);
+                    }
                 });
             <?php
             }
             ?>
 
-            function bindInfoWindow(marker, map, infowindow, html) {
+            function bindInfoWindow(marker, map, infowindow, html, cityid) {
                 google.maps.event.addListener(marker, 'mouseover', function() {
                     infowindow.setContent(html);
+                    if (localStorage.getItem('estado') == 'mover' && localStorage.getItem('from') != cityid) {
+                        infowindow.setContent(html + '<p>Click para mover aqui</p>');
+                    }
                     infowindow.open(map, marker);
                 });
             };
@@ -178,10 +188,10 @@ if (isset($_POST["reiniciar"])) {
                     }
                 } else {
                     tropas_total.innerHTML = "";
-                    nombre.innerHTML = "OCUPADA...";
+                    nombre.innerHTML = result.nombre;
                     owner.innerHTML = result.pais;
-                    botones.innerHTML = "<p>Comprando " + result.ocupada.nombre + "</p>";
-                    botones.innerHTML = "<p id='timer_tropa'>Quedan " + (result.ocupada.final - result.ocupada.ahora) + " Segundos</p>"
+                    botones.innerHTML = "<p>" + result.ocupada.nombre + "</p>";
+                    botones.innerHTML += "<p id='timer_tropa'>Quedan " + (result.ocupada.final - result.ocupada.ahora) + " Segundos</p>"
 
                 }
             },
@@ -215,7 +225,8 @@ if (isset($_POST["reiniciar"])) {
                 //alert(data);
                 updateall();
                 var data = JSON.parse(data);
-                setInterval(function() {
+                if (clearInterval(timer)) {}
+                var timer = setInterval(function() {
                     updateall();
                 }, 1000);
             },
@@ -242,6 +253,37 @@ if (isset($_POST["reiniciar"])) {
                 actividad.innerHTML = "<h4>" + result.actividad + "</h4>";
                 for (var i = 0; i != Object.keys(result.mano).length; i++) {
                     ciudades.innerHTML = '<div class="ciudad" onclick="seleccionar_ciudad(' + result.mano[i].id + ')"><img src="edificio.png" alt=""><h2>' + result.mano[i].nombre + '</h2></div>'
+                }
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+
+    function movertropas(ciudad) {
+        localStorage.setItem('estado', 'mover');
+        localStorage.setItem('from', ciudad);
+    }
+
+    function moveto(dest, from) {
+        console.log("Moviendo de " + from + " a " + dest);
+        $.ajax('./ajax.php', {
+            type: 'POST',
+            data: {
+                moveto: dest,
+                movefrom: from
+            },
+            success: function(data) {
+                //alert(data);
+                //var data = JSON.parse(data);
+                if (data != "cant error") {
+
+                    updateall();
+                    if (clearInterval(timer)) {}
+                    var timer = setInterval(function() {
+                        updateall();
+                    }, 1000);
+                } else {
+                    alert("Amijo, juankear no es funny, te vas a llevar deporte al final")
                 }
             },
             error: function(jqXhr, textStatus, errorMessage) {}
