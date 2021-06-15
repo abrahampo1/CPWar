@@ -132,14 +132,14 @@ if (isset($_POST["reiniciar"])) {
 
     </div>
     <div class="ciudades" id="ciudades">
-        
+
     </div>
     <div class="controles">
         <form action="" method="POST">
             <button name="reiniciar">Reiniciar</button>
         </form>
     </div>
-    <div class="dinero">
+    <div class="dinero" id="dinero">
         <h1>1000€</h1>
     </div>
     <div id="map"></div>
@@ -167,13 +167,22 @@ if (isset($_POST["reiniciar"])) {
                 //alert(data);
                 tropas.innerHTML = "";
                 var result = JSON.parse(data);
-                nombre.innerHTML = result.nombre;
-                owner.innerHTML = result.pais;
-                botones.innerHTML = result.botones;
-                var total_tropas = result.tropas.total;
-                tropas_total.innerHTML = "Tropas: " + total_tropas;
-                for (var i = 0; i != Object.keys(result.tropas.tipos).length; i++) {
-                    tropas.innerHTML += "<p>" + result.tropas.tipos[i].nombre + ": " + result.tropas.tipos[i].cantidad + "</p>";
+                if (result.ocupada.estado == null) {
+                    nombre.innerHTML = result.nombre;
+                    owner.innerHTML = result.pais;
+                    botones.innerHTML = result.botones;
+                    var total_tropas = result.tropas.total;
+                    tropas_total.innerHTML = "Tropas: " + total_tropas;
+                    for (var i = 0; i != Object.keys(result.tropas.tipos).length; i++) {
+                        tropas.innerHTML += "<p>" + result.tropas.tipos[i].nombre + ": " + result.tropas.tipos[i].cantidad + "</p>";
+                    }
+                }else{
+                    tropas_total.innerHTML = "";
+                    nombre.innerHTML = "OCUPADA...";
+                    owner.innerHTML = result.pais;
+                    botones.innerHTML = "<p>Comprando " + result.ocupada.nombre + "</p>";
+                    botones.innerHTML = "<p>Quedan "+ (result.ocupada.final - result.ocupada.ahora) +" Segundos</p>"
+
                 }
             },
             error: function(jqXhr, textStatus, errorMessage) {}
@@ -194,9 +203,25 @@ if (isset($_POST["reiniciar"])) {
         });
     }
 
+    function comprartropa(tropa, ciudad) {
+        $.ajax('./ajax.php', {
+            type: 'POST',
+            data: {
+                comprar: tropa,
+                ciudad: ciudad
+            },
+            success: function(data) {
+                //alert(data);
+                //updateall();
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+
     function updateall() {
         var ciudades = document.getElementById("ciudades");
         var actividad = document.getElementById("actividad");
+        var dinero = document.getElementById("dinero");
         $.ajax('./ajax.php', {
             type: 'POST',
             data: {
@@ -205,11 +230,11 @@ if (isset($_POST["reiniciar"])) {
             success: function(data) {
                 //alert(data);
                 var result = JSON.parse(data);
-                actividad.innerHTML = "<h4>"+result.actividad+"</h4>";
+                dinero.innerHTML = "<h1>" + result.dinero + "€</h1>";
+                actividad.innerHTML = "<h4>" + result.actividad + "</h4>";
                 for (var i = 0; i != Object.keys(result.mano).length; i++) {
-                    ciudades.innerHTML = '<div class="ciudad" onclick="seleccionar_ciudad('+result.mano[i].id+')"><img src="edificio.png" alt=""><h2>'+result.mano[i].nombre+'</h2></div>'
+                    ciudades.innerHTML = '<div class="ciudad" onclick="seleccionar_ciudad(' + result.mano[i].id + ')"><img src="edificio.png" alt=""><h2>' + result.mano[i].nombre + '</h2></div>'
                 }
-                
             },
             error: function(jqXhr, textStatus, errorMessage) {}
         });
