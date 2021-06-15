@@ -152,12 +152,12 @@ if (isset($_POST["reiniciar"])) {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script>
     function seleccionar_ciudad(id) {
+        window.localStorage.setItem('selected', id);
         var nombre = document.getElementById("info-ciudad-nombre");
         var tropas = document.getElementById("info-ciudad-tropas");
         var tropas_total = document.getElementById("info-ciudad-tropas-total");
         var owner = document.getElementById('owner');
         var botones = document.getElementById('buttons');
-        tropas.innerHTML = "Cargando...";
         $.ajax('./ajax.php', {
             type: 'POST', // http method
             data: {
@@ -176,12 +176,12 @@ if (isset($_POST["reiniciar"])) {
                     for (var i = 0; i != Object.keys(result.tropas.tipos).length; i++) {
                         tropas.innerHTML += "<p>" + result.tropas.tipos[i].nombre + ": " + result.tropas.tipos[i].cantidad + "</p>";
                     }
-                }else{
+                } else {
                     tropas_total.innerHTML = "";
                     nombre.innerHTML = "OCUPADA...";
                     owner.innerHTML = result.pais;
                     botones.innerHTML = "<p>Comprando " + result.ocupada.nombre + "</p>";
-                    botones.innerHTML = "<p>Quedan "+ (result.ocupada.final - result.ocupada.ahora) +" Segundos</p>"
+                    botones.innerHTML = "<p id='timer_tropa'>Quedan " + (result.ocupada.final - result.ocupada.ahora) + " Segundos</p>"
 
                 }
             },
@@ -196,12 +196,13 @@ if (isset($_POST["reiniciar"])) {
                 start: ciudad
             },
             success: function(data) {
-                alert(data);
+                //alert(data);
                 updateall();
             },
             error: function(jqXhr, textStatus, errorMessage) {}
         });
     }
+
 
     function comprartropa(tropa, ciudad) {
         $.ajax('./ajax.php', {
@@ -212,7 +213,11 @@ if (isset($_POST["reiniciar"])) {
             },
             success: function(data) {
                 //alert(data);
-                //updateall();
+                updateall();
+                var data = JSON.parse(data);
+                setInterval(function() {
+                    updateall();
+                }, 1000);
             },
             error: function(jqXhr, textStatus, errorMessage) {}
         });
@@ -230,6 +235,9 @@ if (isset($_POST["reiniciar"])) {
             success: function(data) {
                 //alert(data);
                 var result = JSON.parse(data);
+                if (localStorage.getItem("selected")) {
+                    seleccionar_ciudad(localStorage.getItem("selected"));
+                }
                 dinero.innerHTML = "<h1>" + result.dinero + "€</h1>";
                 actividad.innerHTML = "<h4>" + result.actividad + "</h4>";
                 for (var i = 0; i != Object.keys(result.mano).length; i++) {
