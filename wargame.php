@@ -82,12 +82,12 @@ if (isset($_POST["reiniciar"])) {
                 bindInfoWindow(city, map, infowindow, "<p><?php echo $ciudad["nombre"] ?></p>", <?php echo $ciudad["id"] ?>);
                 closeInfoWindow(city, map, infowindow);
                 city.addListener("click", () => {
-                    
+
                     if (localStorage.getItem('estado') == 'mover' && localStorage.getItem('from') != <?php echo $ciudad["id"] ?>) {
                         moveto(<?php echo $ciudad["id"] ?>, localStorage.getItem('from'));
                         localStorage.removeItem('estado');
                         localStorage.removeItem('from');
-                    }else{
+                    } else {
                         seleccionar_ciudad(<?php echo $ciudad["id"] ?>);
                     }
                 });
@@ -251,8 +251,9 @@ if (isset($_POST["reiniciar"])) {
                 }
                 dinero.innerHTML = "<h1>" + result.dinero + "€</h1>";
                 actividad.innerHTML = "<h4>" + result.actividad + "</h4>";
+                ciudades.innerHTML = "";
                 for (var i = 0; i != Object.keys(result.mano).length; i++) {
-                    ciudades.innerHTML = '<div class="ciudad" onclick="seleccionar_ciudad(' + result.mano[i].id + ')"><img src="edificio.png" alt=""><h2>' + result.mano[i].nombre + '</h2></div>'
+                    ciudades.innerHTML += '<div class="ciudad" onclick="seleccionar_ciudad(' + result.mano[i].id + ')"><img src="edificio.png" alt=""><h2>' + result.mano[i].nombre + '</h2></div>'
                 }
             },
             error: function(jqXhr, textStatus, errorMessage) {}
@@ -274,6 +275,31 @@ if (isset($_POST["reiniciar"])) {
             },
             success: function(data) {
                 //alert(data);
+                //var data = JSON.parse(data);
+                if (data != "cant error") {
+
+                    updateall();
+                    if (clearInterval(timer)) {}
+                    var timer = setInterval(function() {
+                        updateall();
+                    }, 1000);
+                } else {
+                    alert("Amijo, juankear no es funny, te vas a llevar deporte al final")
+                }
+            },
+            error: function(jqXhr, textStatus, errorMessage) {}
+        });
+    }
+
+    function conquistar(ciudad) {
+        console.log("Conquistando " + ciudad);
+        $.ajax('./ajax.php', {
+            type: 'POST',
+            data: {
+                conquistar: ciudad
+            },
+            success: function(data) {
+                alert(data);
                 //var data = JSON.parse(data);
                 if (data != "cant error") {
 

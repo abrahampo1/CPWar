@@ -35,8 +35,8 @@ if (isset($_POST["id"])) {
         <button type="button" onclick="comprartropa(1,' . $_POST["id"] . ')">Comprar Tropas</button>';
     } else if (count($logjson["gente"][$userid]["propiedades"]) == 0) {
         $resultado["botones"] = '<button type="button" onclick="starthere(' . $_POST["id"] . ')">Empezar aqui</button>';
-    } else {
-        $resultado["botones"] = '<button type="button">Conquistar</button>';
+    } else if(isset($json["ciudades"][$_POST["id"]]["tropas"])){
+        $resultado["botones"] = '<button type="button" onclick="conquistar('.$_POST['id'].')">Conquistar</button>';
     }
     echo json_encode($resultado);
 }
@@ -58,7 +58,7 @@ if (isset($_POST["start"])) {
         mysqli_query($link, $sql);
         $json = json_decode($resultado["log"], true);
         $nombre = $json["gente"][$_SESSION["userid"]]["nombre"];
-        $json["gente"][$_SESSION["userid"]]["propiedades"][$_POST["start"]] = $_POST["start"];
+        $json["gente"][$_SESSION["userid"]]["propiedades"][$_POST["start"]] = ['id' => $_POST["start"], 'nombre' => $ciudad];
         $actividad .= "<p>" . $nombre . " ha empezado en " . $ciudad . "</p>";
         $json = json_encode($json);
         $sql = "UPDATE `partidas` SET `actividad` = '$actividad' WHERE `partidas`.`id` = 1;";
@@ -77,11 +77,12 @@ if (isset($_POST["log"])) {
     $json = json_decode($resultado["log"], true);
     $usuario = $json["gente"][$_SESSION["userid"]];
     $data["mano"] = [];
+    $ciudad = null;
     foreach ($usuario["propiedades"] as $ciudad) {
-        $sql = "SELECT * FROM ciudades WHERE id = " . $ciudad;
+        $sql = "SELECT * FROM ciudades WHERE id = " . $ciudad["id"];
         $do = mysqli_query($link, $sql);
         $ciudad_sql = mysqli_fetch_assoc($do);
-        $data["mano"][] = ['id' => $ciudad, 'nombre' => $ciudad_sql["nombre"]];
+        $data["mano"][] = ['id' => $ciudad["id"], 'nombre' => $ciudad_sql["nombre"]];
     }
     $data["actividad"] = $resultado["actividad"];
     $data["dinero"] = $usuario["dinero"];
@@ -96,6 +97,25 @@ if (isset($_POST["log"])) {
             if (time() > $tarea["end"]) {
                 $ciudad = json_decode($resultado["ciudades"], true);
                 $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["ocupada"] = ['estado' => null, 'nombre' => null, 'inicio' => null, 'final' => null, 'ahora' => time(), 'tropas' => []];
+                if($tarea["conquistar"] != null){
+                    $ciudadconquistar = $tarea["conquistar"];
+                    if($ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["owner"] != $_SESSION["userid"]){
+                        $tropas = false;
+                        $tropas_user = 0;
+                        $tropas_total = 0;
+                        foreach($ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"] as $tropa){
+                            $tropas = true;
+                            $tropas_total += $tropa["cantidad"];
+                            if($tropa["owner"] == $_SESSION["userid"]){
+                                $tropas_user += $tropa["cantidad"];
+                            }
+                        }
+                        if($tropas_total - $tropas_user <= 0){
+                            $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["owner"] = $_SESSION["userid"];
+                            $usuario["propiedades"][$usuario["tareas"][$i]["ciudad"]["id"]] = ['id' => $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["id"], 'nombre' => $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["nombre"]];
+                        }
+                    }
+                }
                 if ($tarea["moveto"] != null) {
                     $moveto = $tarea["moveto"];
                     $movefrom = $tarea["movefrom"];
@@ -107,7 +127,7 @@ if (isset($_POST["log"])) {
                         $sql = "SELECT * FROM tropas WHERE id = " . $movetropa;
                         $do = mysqli_query($link, $sql);
                         $tropainfo = mysqli_fetch_assoc($do);
-                        $ciudad["ciudades"][$moveto]["tropas"][$movetropa] = ['nombre' => $tropainfo["nombre"], 'cantidad' => $movecant, 'id' => $tropainfo["id"]];
+                        $ciudad["ciudades"][$moveto]["tropas"][$movetropa] = ['nombre' => $tropainfo["nombre"], 'cantidad' => $movecant, 'id' => $tropainfo["id"], 'owner' => $_SESSION["userid"]];
                     }
                     $ciudad["ciudades"][$movefrom]["tropas"][$movetropa]["cantidad"] = $ciudad["ciudades"][$movefrom]["tropas"][$movetropa]["cantidad"] - $movecant;
                 }
@@ -117,13 +137,15 @@ if (isset($_POST["log"])) {
                     $tropainfo = mysqli_fetch_assoc($do);
                     if (isset($ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]])) {
                         $nuevacantidad = $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]]["cantidad"] + $tropainfo["cantidad"];
-                        $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]] = ['nombre' => $tarea["nombre"], 'cantidad' => $nuevacantidad, 'id' => $tarea["tropaid"]];
+                        $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]] = ['nombre' => $tarea["nombre"], 'cantidad' => $nuevacantidad, 'id' => $tarea["tropaid"], 'owner' => $_SESSION["userid"]];
                     } else {
-                        $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]] = ['nombre' => $tarea["nombre"], 'cantidad' => $tropainfo["cantidad"], 'id' => $tarea["tropaid"]];
+                        $ciudad["ciudades"][$usuario["tareas"][$i]["ciudad"]]["tropas"][$tropainfo["id"]] = ['nombre' => $tarea["nombre"], 'cantidad' => $tropainfo["cantidad"], 'id' => $tarea["tropaid"], 'owner' => $_SESSION["userid"]];
                     }
                 }
                 $ciudad = json_encode($ciudad);
                 $sql = "UPDATE `partidas` SET `ciudades` = '$ciudad' WHERE `partidas`.`id` = 1;";
+                mysqli_query($link, $sql);
+                $sql = "DELETE FROM `tareas` WHERE `tareas`.`id` = ".$tarea["id"];
                 mysqli_query($link, $sql);
             } else {
                 $tareasnuevas[] = ["id" => $tarea["id"], 'ciudad' => $usuario["tareas"][$i]["ciudad"]];
@@ -210,5 +232,36 @@ if (isset($_POST["moveto"]) && isset($_POST["movefrom"])) {
         } else {
             echo "cant error";
         }
+    }
+}
+if(isset($_POST["conquistar"])){
+    $tiempo = 20;
+    $ahora = time();
+    $termina = $ahora + $tiempo;
+    $conquistar = $_POST["conquistar"];
+    $sql = "INSERT INTO `tareas` (`id`, `start`, `end`, `nombre`, `conquistar`) VALUES (NULL, '$ahora', '$termina', 'Conquistar', $conquistar);";
+    if (mysqli_query($link, $sql)) {
+        $tareaid = mysqli_insert_id($link);
+        $sql = "SELECT * FROM partidas WHERE id = 1";
+        $do = mysqli_query($link, $sql);
+        $resultado = mysqli_fetch_assoc($do);
+        $json = json_decode($resultado["log"], true);
+        $json["gente"][$_SESSION["userid"]]["tareas"][] = ['id' => $tareaid, 'ciudad' => $conquistar];
+        $jsonciudad = json_decode($resultado["ciudades"], true);
+        $jsonciudad["ciudades"][$conquistar]["ocupada"] = ['estado' => $tareaid, 'nombre' => 'Asediando', 'inicio' => $ahora, 'final' => $termina];
+        if (isset($jsonciudad["ciudades"][$conquistar]["tropas"][1]["cantidad"])) {
+            if ($jsonciudad["ciudades"][$conquistar]["tropas"][1]["cantidad"] >= 1000) {
+                $json = json_encode($json);
+                $jsonciudad = json_encode($jsonciudad);
+                $sql = "UPDATE `partidas` SET `log` = '$json' WHERE `partidas`.`id` = 1;";
+                mysqli_query($link, $sql);
+                $sql = "UPDATE `partidas` SET `ciudades` = '$jsonciudad' WHERE `partidas`.`id` = 1;";
+                mysqli_query($link, $sql);
+            }
+        } else {
+            echo "cant error";
+        }
+    }else{
+        echo mysqli_error($link);
     }
 }
